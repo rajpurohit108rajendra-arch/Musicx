@@ -18,8 +18,14 @@ jobs:
       - name: Extract project
         run: |
           unzip -o MusicX-Android.zip -d extracted
-          find extracted -name gradlew -exec chmod +x {} \;
-          echo "PROJECT_DIR=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)" >> $GITHUB_ENV
+          echo "Extracted files:"
+          find extracted -maxdepth 4 -type f | head -100
+          PROJECT_DIR=$(find extracted -name settings.gradle.kts -type f -exec dirname {} \; | head -n 1)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: settings.gradle.kts not found"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -27,11 +33,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Build APK
         run: |
           cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
